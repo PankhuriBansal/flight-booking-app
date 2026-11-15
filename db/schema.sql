@@ -38,3 +38,35 @@ INSERT INTO bookings (user_id, flight_id) VALUES
   (1, 1),
   (1, 3),
   (2, 2);
+
+
+-- day 5 
+-- 1
+SELECT b.id, f.origin, f.destination, f.price
+FROM bookings b
+JOIN flights f ON b.flight_id = f.id
+WHERE b.user_id = 1;
+
+-- 2
+SELECT * FROM flights
+WHERE origin = 'DEL' AND destination = 'BOM'
+ORDER BY price ASC;
+
+-- 3
+SELECT f.id, f.origin, f.destination, COUNT(b.id) AS times_booked
+FROM flights f
+LEFT JOIN bookings b ON b.flight_id = f.id
+GROUP BY f.id, f.origin, f.destination;
+
+-- 4
+SELECT u.name, SUM(f.price) AS total_spent
+FROM users u
+JOIN bookings b ON b.user_id = u.id
+JOIN flights f ON b.flight_id = f.id
+GROUP BY u.id, u.name;
+
+-- 5
+SELECT u.name
+FROM users u
+LEFT JOIN bookings b ON b.user_id = u.id
+WHERE b.id IS NULL;
