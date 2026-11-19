@@ -122,4 +122,31 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/:id/bookings", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ message: "Invalid id" });
+    return;
+  }
+  try {
+    const user = await pool.query("SELECT id FROM users WHERE id=$1", [id]);
+    if (user.rows.length === 0) {
+      res.status(404).json({ message: "User not found" });
+    }
+    const result = await pool.query<UserBooking>(
+      `SELECT b.id AS booking_id, b.status, b.created_at AS booked_at, f.origin, f.destination, f.departure_time,f.price
+        FROM bookings b
+        JOIN flights f ON b.flight_id = f.id
+        WHERE b.user_id = $1
+        ORDER BY b.created_at DESC
+        `,
+      [id],
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({message: "Server Error"});
+  }
+});
+
 export default router;

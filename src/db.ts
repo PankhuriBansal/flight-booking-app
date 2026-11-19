@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Pool, types } from "pg";
 
-// NUMERIC (price) ko number banane ke liye, Din 6 mein kaam aayega
+// 1700 = NUMERIC ka type id. Isse price number ban ke aayega, string nahi
 types.setTypeParser(1700, (val: string) => parseFloat(val));
 
 export const pool = new Pool({
