@@ -1,9 +1,9 @@
-import "dotenv/config";
-import express, { Request, Response, NextFunction } from "express";
-// import { Flight, NewFlight } from "./types";
-import usersRouter from "./routes/users";
-import flightsRouter from "./routes/flights";
-import bookingsRouter from "./routes/bookings";
+import express from "express";
+import type { Request, Response, NextFunction } from "express";
+
+import usersRouter from "./routes/users.js";
+import flightsRouter from "./routes/flights.js";
+import bookingsRouter from "./routes/bookings.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;

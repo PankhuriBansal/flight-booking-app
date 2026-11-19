@@ -1,6 +1,8 @@
-import { Router, Request, Response } from "express";
-import { pool } from "../db";
-import { Booking, NewBooking, BookingDetails } from "../types";
+import { Router } from "express";
+import type { Request, Response } from "express";
+
+import { pool } from "../db.js";
+import type { Booking, NewBooking, BookingDetails } from "../types.js";
 
 const router = Router();
 
@@ -88,7 +90,7 @@ router.patch("/:id/cancel", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Booking not found" });
       return;
     }
-    if (existing.rows[0].status === "cancelled") {
+    if (existing.rows[0]?.status === "cancelled") {
       res.status(404).json({ message: "Booking already cancelled" });
       return;
     }

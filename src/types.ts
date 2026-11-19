@@ -1,21 +1,3 @@
-export type Flight = {
-  id: number;
-  origin: string;
-  destination: string;
-  price: number;
-};
-
-export type NewFlight = Omit<Flight, "id">;
-
-export type User = {
-  id: number;
-  name: string;
-  email: string;
-  created_at: Date;
-};
-
-export type NewUser = Pick<User, "name" | "email">;
-
 export type User = {
   id: number;
   name: string;
@@ -33,7 +15,6 @@ export type Flight = {
   price: number;
 };
 
-// Body mein departure_time string aati hai ("2026-12-20 09:30")
 export type NewFlight = {
   origin: string;
   destination: string;
@@ -65,4 +46,13 @@ export type BookingDetails = {
   price: number;
 };
 
-export type UserBooking = Omit<BookingDetails, "user_name" | "user_email">;
+export type UserBooking = Pick<
+  BookingDetails,
+  | "booking_id"
+  | "status"
+  | "booked_at"
+  | "origin"
+  | "destination"
+  | "departure_time"
+  | "price"
+>;

@@ -1,6 +1,8 @@
-import { Router, Request, Response } from "express";
-import { pool } from "../db";
-import { Flight, NewFlight } from "../types";
+import { Router } from "express";
+import type { Request, Response } from "express";
+
+import { pool } from "../db.js";
+import type { Flight, NewFlight } from "../types.js";
 
 const router = Router();
 

@@ -1,6 +1,8 @@
-import { Router, Request, Response } from "express";
-import { pool } from "../db";
-import { User, NewUser } from "../types";
+import { Router } from "express";
+import type { Request, Response } from "express";
+
+import { pool } from "../db.js";
+import type { User, NewUser, UserBooking } from "../types.js";
 
 const router = Router();
 
@@ -145,7 +147,7 @@ router.get("/:id/bookings", async (req: Request, res: Response) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({message: "Server Error"});
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
