@@ -4,6 +4,8 @@ import type { Request, Response } from "express";
 import { pool } from "../db.js";
 import type { Booking, NewBooking, BookingDetails } from "../types.js";
 
+import { validateBody, parseId } from "../middleware/validate.js";
+import { bookingSchema } from "../schemas.js";
 const router = Router();
 
 const DETAILS_SQL = `
@@ -28,8 +30,8 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }
@@ -50,34 +52,33 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
-  const { user_id, flight_id } = req.body as Partial<NewBooking>;
+router.post(
+  "/",
+  validateBody(bookingSchema),
+  async (req: Request, res: Response) => {
+    const { user_id, flight_id } = req.body as NewBooking;
 
-  if (!Number.isInteger(user_id) || !Number.isInteger(flight_id)) {
-    res.status(400).json({ message: "user_id and flight_id must be integers" });
-    return;
-  }
-
-  try {
-    const result = await pool.query<Booking>(
-      "INSERT INTO bookings (user_id, flight_id) VALUES ($1, $2) RETURNING *",
-      [user_id, flight_id],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    const e = err as { code?: string };
-    if (e.code === "23503") {
-      res.status(404).json({ message: "User or flight does not exist" });
-      return;
+    try {
+      const result = await pool.query<Booking>(
+        "INSERT INTO bookings (user_id, flight_id) VALUES ($1, $2) RETURNING *",
+        [user_id, flight_id],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      const e = err as { code?: string };
+      if (e.code === "23503") {
+        res.status(404).json({ message: "User or flight does not exist" });
+        return;
+      }
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
     }
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+  },
+);
 
 router.patch("/:id/cancel", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }

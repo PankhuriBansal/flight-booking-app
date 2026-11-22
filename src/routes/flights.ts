@@ -4,6 +4,9 @@ import type { Request, Response } from "express";
 import { pool } from "../db.js";
 import type { Flight, NewFlight } from "../types.js";
 
+import { validateBody, parseId } from "../middleware/validate.js";
+import { flightSchema } from "../schemas.js";
+
 const router = Router();
 
 function validateFlight(body: Partial<NewFlight>): string | null {
@@ -58,8 +61,8 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid ID" });
     return;
   }
@@ -81,72 +84,125 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
-  const error = validateFlight(req.body as Partial<NewFlight>);
-  if (error) {
-    res.status(400).json({ message: error });
-    return;
-  }
+// router.post("/", async (req: Request, res: Response) => {
+//   const error = validateFlight(req.body as Partial<NewFlight>);
+//   if (error) {
+//     res.status(400).json({ message: error });
+//     return;
+//   }
 
-  const { origin, destination, departure_time, price } = req.body as NewFlight;
+//   const { origin, destination, departure_time, price } = req.body as NewFlight;
 
-  try {
-    const result = await pool.query<Flight>(
-      "INSERT INTO flights (origin, destination, departure_time, price) VALUES ($1, $2, $3, $4) RETURNING *",
-      [
-        origin.trim().toUpperCase(),
-        destination.trim().toUpperCase(),
-        departure_time,
-        price,
-      ],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server Error" });
-  }
-});
+//   try {
+//     const result = await pool.query<Flight>(
+//       "INSERT INTO flights (origin, destination, departure_time, price) VALUES ($1, $2, $3, $4) RETURNING *",
+//       [
+//         origin.trim().toUpperCase(),
+//         destination.trim().toUpperCase(),
+//         departure_time,
+//         price,
+//       ],
+//     );
+//     res.status(201).json(result.rows[0]);
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// });
 
-router.put("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    res.status(400).json({ message: "Invalid id" });
-    return;
-  }
+// replacing the post query in the flights
 
-  const error = validateFlight(req.body as Partial<NewFlight>);
-  if (error) {
-    res.status(400).json({ message: error });
-    return;
-  }
+router.post(
+  "/",
+  validateBody(flightSchema),
+  async (req: Request, res: Response) => {
+    const { origin, destination, departure_time, price } =
+      req.body as NewFlight;
 
-  const { origin, destination, departure_time, price } = req.body as NewFlight;
+    try {
+      const result = await pool.query<Flight>(
+        `INSERT INTO flights (origin, destination, departure_time, price)
+ VALUES ($1, $2, $3, $4)
+ RETURNING *`,
+        [origin, destination, departure_time, price],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
 
-  try {
-    const result = await pool.query<Flight>(
-      "UPDATE flights SET origin=$1, destination = $2, departure_time=$3,price=$4  WHERE id=$5 RETURNING *",
-      [
-        origin.trim().toUpperCase(),
-        destination.trim().toUpperCase(),
-        departure_time,
-        price,
-        id,
-      ],
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ message: "Flight not found" });
+// router.put("/:id", async (req: Request, res: Response) => {
+//   const id = parseId(req.params.id);
+//   if (id === null) {
+//     res.status(400).json({ message: "Invalid id" });
+//     return;
+//   }
+
+//   const error = validateFlight(req.body as Partial<NewFlight>);
+//   if (error) {
+//     res.status(400).json({ message: error });
+//     return;
+//   }
+
+//   const { origin, destination, departure_time, price } = req.body as NewFlight;
+
+//   try {
+//     const result = await pool.query<Flight>(
+//       "UPDATE flights SET origin=$1, destination = $2, departure_time=$3,price=$4  WHERE id=$5 RETURNING *",
+//       [
+//         origin.trim().toUpperCase(),
+//         destination.trim().toUpperCase(),
+//         departure_time,
+//         price,
+//         id,
+//       ],
+//     );
+//     if (result.rows.length === 0) {
+//       res.status(404).json({ message: "Flight not found" });
+//       return;
+//     }
+//     res.json(result.rows[0]);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
+router.put(
+  "/:id",
+  validateBody(flightSchema),
+  async (req: Request, res: Response) => {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      res.status(400).json({ message: "Invalid id" });
       return;
     }
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+
+    const { origin, destination, departure_time, price } =
+      req.body as NewFlight;
+
+    try {
+      const result = await pool.query<Flight>(
+        "UPDATE flights SET origin = $1, destination=$2,departure_time=$3, price=$4 WHERE id = $5 RETURNING *",
+        [origin, destination, departure_time, price, id],
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ message: "Flight not found" });
+        return;
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
 
 router.delete("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }

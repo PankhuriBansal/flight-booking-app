@@ -4,6 +4,9 @@ import type { Request, Response } from "express";
 import { pool } from "../db.js";
 import type { User, NewUser, UserBooking } from "../types.js";
 
+import { validateBody, parseId } from "../middleware/validate.js";
+import { userSchema } from "../schemas.js";
+
 const router = Router();
 
 router.get("/", async (req: Request, res: Response) => {
@@ -17,8 +20,8 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }
@@ -38,33 +41,9 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
-  const { name, email } = req.body as Partial<NewUser>;
-  if (!name || !email) {
-    res.status(400).json({ message: "name and email are required" });
-    return;
-  }
-
-  try {
-    const result = await pool.query<User>(
-      "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
-      [name, email],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    const e = err as { code?: string };
-    if (e.code === "23505") {
-      res.status(409).json({ message: "Email already exists" });
-      return;
-    }
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 router.put("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }
@@ -97,8 +76,8 @@ router.put("/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/:id", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }
@@ -125,8 +104,8 @@ router.delete("/:id", async (req: Request, res: Response) => {
 });
 
 router.get("/:id/bookings", async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
+  const id = parseId(req.params.id);
+  if (id === null) {
     res.status(400).json({ message: "Invalid id" });
     return;
   }
@@ -150,5 +129,64 @@ router.get("/:id/bookings", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
+
+//replaced post
+router.post(
+  "/",
+  validateBody(userSchema),
+  async (req: Request, res: Response) => {
+    const { name, email } = req.body as NewUser;
+    try {
+      const result = await pool.query<User>(
+        "INSERT INTO users (name,email) VALUES ($1,$2) RETURNING *",
+        [name, email],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      const e = err as { code?: string };
+      if (e.code === "23505") {
+        res.status(409).json({ message: "Email already exists" });
+        return;
+      }
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
+
+//replaced put
+router.put(
+  "/:id",
+  validateBody(userSchema),
+  async (req: Request, res: Response) => {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      res.status(400).json({ message: "Invalid id" });
+      return;
+    }
+
+    const { name, email } = req.body as NewUser;
+
+    try {
+      const result = await pool.query<User>(
+        "UPDATE users SET name = $1, email= $2 WHERE id=$3 RETURNING *",
+        [name, email, id],
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      const e = err as { code?: string };
+      if (e.code === "23505") {
+        res.status(409).json({ message: "Email already exists" });
+        return;
+      }
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+);
 
 export default router;
