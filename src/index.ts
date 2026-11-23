@@ -5,6 +5,8 @@ import usersRouter from "./routes/users.js";
 import flightsRouter from "./routes/flights.js";
 import bookingsRouter from "./routes/bookings.js";
 
+import { notFound, errorHandler } from "./middleware/errorHandler.js";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -19,6 +21,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use("/flights", flightsRouter);
 app.use("/bookings", bookingsRouter);
+
+app.use(notFound);
+app.use(errorHandler);
 
 app.get("/hello", (req: Request, res: Response) => {
   res.json({ message: "Hello from flight booking api" });
