@@ -11,7 +11,8 @@ CREATE TABLE flights (
   origin TEXT NOT NULL,
   destination TEXT NOT NULL,
   departure_time TIMESTAMP NOT NULL,
-  price NUMERIC(10,2) NOT NULL
+  price NUMERIC(10,2) NOT NULL,
+  seats_available INT NOT NULL DEFAULT 100 CHECK (seats_available >= 0)
 );
 
 CREATE TABLE bookings (
@@ -21,6 +22,10 @@ CREATE TABLE bookings (
   status TEXT DEFAULT 'confirmed',
   created_at TIMESTAMP DEFAULT now()
 );
+
+CREATE INDEX idx_bookings_user_id ON bookings (user_id);
+CREATE INDEX idx_bookings_flight_id ON bookings (flight_id);
+CREATE INDEX idx_flights_route_time ON flights(origin, destination, departure_time);
 
 -- Dummy data
 INSERT INTO users (name, email) VALUES

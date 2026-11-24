@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../db.js";
+import { pool, withTransaction } from "../db.js";
 import type { Booking, NewBooking, BookingDetails } from "../types.js";
 import { validateBody, requireId } from "../middleware/validate.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
@@ -60,18 +60,41 @@ router.post(
   asyncHandler(async (req, res) => {
     const { user_id, flight_id } = req.body as NewBooking;
 
-    try {
-      const result = await pool.query<Booking>(
-        "INSERT INTO bookings (user_id, flight_id) VALUES ($1, $2) RETURNING *",
-        [user_id, flight_id],
+    const booking = await withTransaction(async (client) => {
+      // Step 1: seat ghatao, sirf tab jab seat bachi ho (ek hi atomic statement)
+      const seat = await client.query(
+        "UPDATE flights SET seats_available = seats_available - 1 WHERE id = $1 AND seats_available > 0 RETURNING id",
+        [flight_id],
       );
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      if (pgErrorCode(err) === "23503") {
-        throw new HttpError(404, "User or flight does not exist");
+
+      if (seat.rows.length === 0) {
+        // Ya to flight hai hi nahi, ya seats khatam
+        const flight = await client.query(
+          "SELECT id FROM flights WHERE id = $1",
+          [flight_id],
+        );
+        if (flight.rows.length === 0) {
+          throw new HttpError(404, "Flight not found");
+        }
+        throw new HttpError(409, "No seats available");
       }
-      throw err;
-    }
+
+      // Step 2: booking banao. Fail hui to upar ki seat bhi rollback ho jayegi
+      try {
+        const result = await client.query<Booking>(
+          "INSERT INTO bookings (user_id, flight_id) VALUES ($1, $2) RETURNING *",
+          [user_id, flight_id],
+        );
+        return result.rows[0];
+      } catch (err) {
+        if (pgErrorCode(err) === "23503") {
+          throw new HttpError(404, "User does not exist");
+        }
+        throw err;
+      }
+    });
+
+    res.status(201).json(booking);
   }),
 );
 
@@ -80,23 +103,35 @@ router.patch(
   asyncHandler(async (req, res) => {
     const id = requireId(req.params.id);
 
-    const existing = await pool.query<Booking>(
-      "SELECT * FROM bookings WHERE id = $1",
-      [id],
-    );
-    const booking = existing.rows[0];
-    if (!booking) {
-      throw new HttpError(404, "Booking not found");
-    }
-    if (booking.status === "cancelled") {
-      throw new HttpError(409, "Booking already cancelled");
-    }
+    const cancelled = await withTransaction(async (client) => {
+      // Sirf wahi booking cancel hogi jo abhi cancelled nahi hai (ek hi atomic statement)
+      const result = await client.query<Booking>(
+        "UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND status <> 'cancelled' RETURNING *",
+        [id],
+      );
 
-    const result = await pool.query<Booking>(
-      "UPDATE bookings SET status = 'cancelled' WHERE id = $1 RETURNING *",
-      [id],
-    );
-    res.json(result.rows[0]);
+      const row = result.rows[0];
+      if (!row) {
+        const existing = await client.query(
+          "SELECT id FROM bookings WHERE id = $1",
+          [id],
+        );
+        if (existing.rows.length === 0) {
+          throw new HttpError(404, "Booking not found");
+        }
+        throw new HttpError(409, "Booking already cancelled");
+      }
+
+      // Seat wapas karo
+      await client.query(
+        "UPDATE flights SET seats_available = seats_available + 1 WHERE id = $1",
+        [row.flight_id],
+      );
+
+      return row;
+    });
+
+    res.json(cancelled);
   }),
 );
 

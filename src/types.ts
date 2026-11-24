@@ -13,6 +13,7 @@ export type Flight = {
   destination: string;
   departure_time: Date;
   price: number;
+  seats_available: number;
 };
 
 export type NewFlight = {

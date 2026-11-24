@@ -9,6 +9,7 @@ import { flightSchema } from "../schemas.js";
 
 const router = Router();
 
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {

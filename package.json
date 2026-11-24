@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js",
-    "practice": "tsx src/practice.ts"
+    "practice": "tsx src/practice.ts",
+    "race-test": "tsx src/scripts/raceTest.ts"
   },
   "keywords": [],
   "author": "",
