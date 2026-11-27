@@ -11,9 +11,12 @@ const router = Router();
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const result = await pool.query<User>("SELECT * FROM users ORDER BY id");
+    console.log(">>> USERS GET / HIT <<<");
+    const result = await pool.query<User>(
+      "SELECT id, name, email, created_at FROM users ORDER BY id",
+    );
     res.json(result.rows);
-  })
+  }),
 );
 
 router.get(
@@ -21,14 +24,14 @@ router.get(
   asyncHandler(async (req, res) => {
     const id = requireId(req.params.id);
     const result = await pool.query<User>(
-      "SELECT * FROM users WHERE id = $1",
-      [id]
+      "SELECT id, name, email, created_at FROM users WHERE id = $1",
+      [id],
     );
     if (result.rows.length === 0) {
       throw new HttpError(404, "User not found");
     }
     res.json(result.rows[0]);
-  })
+  }),
 );
 
 router.post(
@@ -39,8 +42,8 @@ router.post(
 
     try {
       const result = await pool.query<User>(
-        "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
-        [name, email]
+        "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at",
+        [name, email],
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -49,7 +52,7 @@ router.post(
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.put(
@@ -61,8 +64,8 @@ router.put(
 
     try {
       const result = await pool.query<User>(
-        "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *",
-        [name, email, id]
+        "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email, created_at",
+        [name, email, id],
       );
       if (result.rows.length === 0) {
         throw new HttpError(404, "User not found");
@@ -74,7 +77,7 @@ router.put(
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.delete(
@@ -84,8 +87,8 @@ router.delete(
 
     try {
       const result = await pool.query<User>(
-        "DELETE FROM users WHERE id = $1 RETURNING *",
-        [id]
+        "DELETE FROM users WHERE id = $1 RETURNING id, name, email, created_at",
+        [id],
       );
       if (result.rows.length === 0) {
         throw new HttpError(404, "User not found");
@@ -97,7 +100,7 @@ router.delete(
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.get(
@@ -117,10 +120,10 @@ router.get(
        JOIN flights f ON b.flight_id = f.id
        WHERE b.user_id = $1
        ORDER BY b.created_at DESC`,
-      [id]
+      [id],
     );
     res.json(result.rows);
-  })
+  }),
 );
 
 export default router;

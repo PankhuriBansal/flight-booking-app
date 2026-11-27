@@ -2,7 +2,8 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
   created_at TIMESTAMP DEFAULT now()
 );
 
@@ -75,3 +76,4 @@ SELECT u.name
 FROM users u
 LEFT JOIN bookings b ON b.user_id = u.id
 WHERE b.id IS NULL;
+

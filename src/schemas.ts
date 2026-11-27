@@ -15,6 +15,21 @@ export const userSchema = z.object({
   email: z.string().trim().toLowerCase().email("email is in valid"),
 });
 
+export const signUpSchema = userSchema.extend({
+  password: z
+    .string()
+    .min(8, "password must be of 8 characters")
+    .max(72, "password must be at most 72 characters"),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("email is invalid"),
+  password: z
+    .string()
+    .min(1, "password is required")
+    .max(72, "password must be at most 72 characters"),
+});
+
 export const flightSchema = z
   .object({
     origin: airportCode,
